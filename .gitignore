@@ -1,0 +1,7 @@
+# Local Pi runtime state
+.atl/
+
+# Environment secrets
+.env
+.env.development
+.env.production
