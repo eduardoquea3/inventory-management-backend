@@ -152,7 +152,7 @@
                     {
                         "name": "q",
                         "in": "query",
-                        "description": "Substring filter on name. Legacy raw SQL interpolation creates SQL-injection risk; do not expose this endpoint to untrusted input before fixing it.",
+                        "description": "Substring filter on name.",
                         "schema": {
                             "type": "string"
                         }
@@ -170,14 +170,36 @@
                         "schema": {
                             "type": "integer"
                         }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number; defaults to 1.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Unpaginated product rows with category and total_movements"
+                        "description": "Paginated product rows with category and total_movements"
                     },
                     "401": {
                         "description": "Missing or invalid token"
+                    },
+                    "422": {
+                        "description": "Invalid pagination parameters"
                     }
                 },
                 "security": [
@@ -395,9 +417,36 @@
                 ],
                 "summary": "List categories",
                 "operationId": "75de91f259fe671f8452ddf56f106d29",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number; defaults to 1.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Unpaginated categories"
+                        "description": "Laravel paginator envelope with data, links, and meta"
+                    },
+                    "401": {
+                        "description": "Missing or invalid token"
+                    },
+                    "422": {
+                        "description": "Invalid pagination parameters"
                     }
                 },
                 "security": [

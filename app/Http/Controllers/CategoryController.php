@@ -10,9 +10,15 @@ class CategoryController extends Controller
 {
     public function index(Request $request)
     {
-        // Legacy issue: returns all records, no cache, no pagination.
-        $categories = Category::orderBy('created_at', 'desc')->get();
-        return response()->json(['categories' => $categories]);
+        $validated = $request->validate([
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $categories = Category::orderByDesc('created_at')->orderByDesc('id')
+            ->paginate((int) ($validated['per_page'] ?? 15));
+
+        return \Illuminate\Http\Resources\Json\JsonResource::collection($categories);
     }
 
     public function store(Request $request)

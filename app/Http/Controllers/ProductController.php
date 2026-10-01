@@ -12,31 +12,33 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        // Legacy issue: no pagination, raw SQL, string concatenation and N+1 category loading.
-        $sql = "SELECT * FROM products WHERE 1=1";
+        $validated = $request->validate([
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+        ]);
 
-        if ($request->get('q')) {
-            $sql .= " AND name LIKE '%" . $request->get('q') . "%'";
+        $query = DB::table('products');
+        if ($request->filled('q')) {
+            $query->where('name', 'like', '%' . $request->input('q') . '%');
+        }
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->input('category_id'));
+        }
+        if ($request->has('status')) {
+            $query->where('status', $request->input('status'));
         }
 
-        if ($request->get('category_id')) {
-            $sql .= " AND category_id = " . $request->get('category_id');
-        }
+        $products = $query->orderByDesc('created_at')->orderByDesc('id')
+            ->paginate((int) ($validated['per_page'] ?? 15));
 
-        if ($request->get('status') !== null) {
-            $sql .= " AND status = " . $request->get('status');
-        }
-
-        $sql .= " ORDER BY created_at DESC";
-
-        $products = DB::select($sql);
-
-        foreach ($products as $product) {
+        $products->getCollection()->transform(function ($product) {
             $product->category = DB::table('categories')->where('id', $product->category_id)->first();
+            $product->category = $product->category ? (array) $product->category : null;
             $product->total_movements = DB::table('stock_movements')->where('product_id', $product->id)->count();
-        }
+            return (array) $product;
+        });
 
-        return response()->json($products);
+        return \Illuminate\Http\Resources\Json\JsonResource::collection($products);
     }
 
     public function store(Request $request)
