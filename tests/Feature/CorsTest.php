@@ -9,7 +9,7 @@ class CorsTest extends TestCase
     /**
      * @dataProvider localFrontendOrigins
      */
-    public function test_api_preflight_allows_local_frontend_json_bearer_requests($origin)
+    public function test_api_preflight_allows_local_frontend_json_bearer_requests(string $origin)
     {
         $response = $this->call('OPTIONS', '/api/health', [], [], [], [
             'HTTP_ORIGIN' => $origin,
@@ -26,11 +26,11 @@ class CorsTest extends TestCase
         $this->assertStringContainsString('x-csrf-token', $allowedHeaders);
     }
 
-    public function localFrontendOrigins()
+    public static function localFrontendOrigins(): array
     {
         return [
-            ['localhost frontend' => 'http://localhost:5173'],
-            ['127.0.0.1 frontend' => 'http://127.0.0.1:5173'],
+            ['http://localhost:5173'],
+            ['http://127.0.0.1:5173'],
         ];
     }
 }
