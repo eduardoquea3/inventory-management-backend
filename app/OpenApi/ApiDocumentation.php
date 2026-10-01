@@ -1,0 +1,42 @@
+<?php
+
+namespace App\OpenApi;
+
+/**
+ * @OA\OpenApi(
+ *   @OA\Info(title="Legacy API", version="1.0.0", description="Laravel 8 legacy API. Request and response fields reflect observed controller behavior; optional or weakly validated legacy fields are not represented as guarantees."),
+ *   @OA\Server(url="/", description="Current host"),
+ *   @OA\Tag(name="Authentication"), @OA\Tag(name="Dashboard"),
+ *   @OA\Tag(name="Products"), @OA\Tag(name="Categories"),
+ *   @OA\Tag(name="Stock movements"),
+ *   @OA\Components(
+ *   @OA\Schema(schema="LoginRequest", required={"email", "password"}, @OA\Property(property="email", type="string", format="email"), @OA\Property(property="password", type="string", format="password")),
+ *   @OA\Schema(schema="LoginResponse", required={"token", "user"}, @OA\Property(property="token", type="string", description="Opaque token stored in users.api_token"), @OA\Property(property="user", type="object", @OA\Property(property="id", type="integer"), @OA\Property(property="name", type="string"), @OA\Property(property="email", type="string", format="email"))),
+ *   @OA\Schema(schema="ProductInput", @OA\Property(property="name", type="string", description="Required when creating; update validation is not defined."), @OA\Property(property="description", type="string", nullable=true), @OA\Property(property="price", type="number", format="float", nullable=true), @OA\Property(property="stock", type="integer", nullable=true), @OA\Property(property="category_id", type="integer", nullable=true), @OA\Property(property="status", type="integer", nullable=true, description="Defaults to 1 on create.")),
+ *   @OA\Schema(schema="CategoryInput", @OA\Property(property="name", type="string", description="Required when creating."), @OA\Property(property="description", type="string", nullable=true)),
+ *   @OA\Schema(schema="StockMovementInput", @OA\Property(property="type", type="string", description="The literal 'salida' subtracts stock; every other value adds stock."), @OA\Property(property="quantity", type="integer"), @OA\Property(property="reason", type="string", nullable=true)),
+ *   @OA\Schema(schema="Error", @OA\Property(property="message", type="string"))
+ *   )
+ * )
+ *
+ * @OA\Post(path="/api/login", tags={"Authentication"}, summary="Log in", security={}, @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/LoginRequest")), @OA\Response(response=200, description="Token and public user fields", @OA\JsonContent(ref="#/components/schemas/LoginResponse")), @OA\Response(response=400, description="Missing email or password", @OA\JsonContent(ref="#/components/schemas/Error")), @OA\Response(response=401, description="Invalid credentials"))
+ * @OA\Get(path="/api/health", tags={"Dashboard"}, summary="Database health check", security={}, @OA\Response(response=200, description="Database query succeeded"), @OA\Response(response=500, description="Database query failed"))
+ * @OA\Get(path="/api/me", tags={"Authentication"}, summary="Get authenticated user", security={{"LegacyTokenAuth":{}}}, @OA\Response(response=200, description="Raw user row; fields depend on database schema"), @OA\Response(response=401, description="Missing or invalid token"))
+ * @OA\Post(path="/api/logout", tags={"Authentication"}, summary="Invalidate current token", security={{"LegacyTokenAuth":{}}}, @OA\Response(response=200, description="Token cleared"), @OA\Response(response=401, description="Missing or invalid token"))
+ * @OA\Get(path="/api/dashboard", tags={"Dashboard"}, summary="Dashboard counters and records", security={{"LegacyTokenAuth":{}}}, @OA\Response(response=200, description="Counts, low-stock products, and up to 20 latest movements"), @OA\Response(response=401, description="Missing or invalid token"))
+ * @OA\Get(path="/api/products", tags={"Products"}, summary="List products", security={{"LegacyTokenAuth":{}}}, @OA\Parameter(name="q", in="query", @OA\Schema(type="string"), description="Substring filter on name. Legacy raw SQL interpolation creates SQL-injection risk; do not expose this endpoint to untrusted input before fixing it."), @OA\Parameter(name="category_id", in="query", @OA\Schema(type="integer")), @OA\Parameter(name="status", in="query", @OA\Schema(type="integer")), @OA\Response(response=200, description="Unpaginated product rows with category and total_movements"), @OA\Response(response=401, description="Missing or invalid token"))
+ * @OA\Post(path="/api/products", tags={"Products"}, summary="Create product", security={{"LegacyTokenAuth":{}}}, @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/ProductInput")), @OA\Response(response=201, description="Created product"), @OA\Response(response=422, description="Missing name"))
+ * @OA\Get(path="/api/products/{id}", tags={"Products"}, summary="Get product", security={{"LegacyTokenAuth":{}}}, @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")), @OA\Response(response=200, description="Product with category_name"), @OA\Response(response=404, description="Product not found"))
+ * @OA\Put(path="/api/products/{id}", tags={"Products"}, summary="Update product", security={{"LegacyTokenAuth":{}}}, @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")), @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/ProductInput")), @OA\Response(response=200, description="Updated product"), @OA\Response(response=404, description="Product not found"))
+ * @OA\Delete(path="/api/products/{id}", tags={"Products"}, summary="Delete product", security={{"LegacyTokenAuth":{}}}, @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")), @OA\Response(response=200, description="Deleted"), @OA\Response(response=404, description="Product not found"))
+ * @OA\Get(path="/api/products/{id}/stock-movements", tags={"Stock movements"}, summary="List product stock movements", security={{"LegacyTokenAuth":{}}}, @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")), @OA\Response(response=200, description="Unpaginated movement rows; product existence is not checked"))
+ * @OA\Post(path="/api/products/{id}/stock-movements", tags={"Stock movements"}, summary="Record stock movement", security={{"LegacyTokenAuth":{}}}, @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")), @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/StockMovementInput")), @OA\Response(response=200, description="Updated product and movement"), @OA\Response(response=404, description="Product not found"))
+ * @OA\Get(path="/api/categories", tags={"Categories"}, summary="List categories", security={{"LegacyTokenAuth":{}}}, @OA\Response(response=200, description="Unpaginated categories"))
+ * @OA\Post(path="/api/categories", tags={"Categories"}, summary="Create category", security={{"LegacyTokenAuth":{}}}, @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/CategoryInput")), @OA\Response(response=201, description="Created category"), @OA\Response(response=422, description="Missing name"))
+ * @OA\Get(path="/api/categories/{id}", tags={"Categories"}, summary="Get category", security={{"LegacyTokenAuth":{}}}, @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")), @OA\Response(response=200, description="Category row or null when absent"))
+ * @OA\Put(path="/api/categories/{id}", tags={"Categories"}, summary="Update category", security={{"LegacyTokenAuth":{}}}, @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")), @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/CategoryInput")), @OA\Response(response=200, description="Updated category"), @OA\Response(response=404, description="Category not found"))
+ * @OA\Delete(path="/api/categories/{id}", tags={"Categories"}, summary="Delete category", security={{"LegacyTokenAuth":{}}}, @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")), @OA\Response(response=200, description="Deleted"), @OA\Response(response=404, description="Category not found"))
+ */
+final class ApiDocumentation
+{
+}
