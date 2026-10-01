@@ -5,3 +5,9 @@
 .env
 .env.development
 .env.production
+
+# Composer dependencies and Laravel runtime artifacts
+/vendor/
+/bootstrap/cache/
+/storage/framework/
+/storage/logs/
