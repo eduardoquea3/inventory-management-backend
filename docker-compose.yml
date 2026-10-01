@@ -10,6 +10,40 @@ services:
       - "3307:3306"
     volumes:
       - legacy_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: legacy_api
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+    environment:
+      APP_ENV: local
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: legacy_products
+      DB_USERNAME: root
+      DB_PASSWORD: root
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: >
+      sh -c 'mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/framework/testing
+      && composer install --no-interaction --prefer-dist
+      && if [ ! -f .env ]; then cp .env.example .env; fi
+      && if ! grep -Eq "^APP_KEY=.+$" .env; then php artisan key:generate --force; fi
+      && php artisan migrate --force
+      && php artisan serve --no-reload --host=0.0.0.0 --port=8000'
 
 volumes:
   legacy_mysql_data:
