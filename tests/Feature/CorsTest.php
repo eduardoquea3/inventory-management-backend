@@ -2,13 +2,12 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class CorsTest extends TestCase
 {
-    /**
-     * @dataProvider localFrontendOrigins
-     */
+    #[DataProvider('localFrontendOrigins')]
     public function test_api_preflight_allows_local_frontend_json_bearer_requests(string $origin)
     {
         $response = $this->call('OPTIONS', '/api/health', [], [], [], [
@@ -31,6 +30,8 @@ class CorsTest extends TestCase
         return [
             ['http://localhost:5173'],
             ['http://127.0.0.1:5173'],
+            ['http://localhost:8080'],
+            ['http://127.0.0.1:8080'],
         ];
     }
 }

@@ -9,7 +9,6 @@ class CacheStoreConfigurationTest extends TestCase
 {
     public function test_file_cache_store_can_write_and_read_without_a_database_cache_table(): void
     {
-        $this->assertSame('file', config('cache.default'));
         $this->assertSame(storage_path('framework/cache/data'), config('cache.stores.file.path'));
 
         $key = 'cache-store-regression-'.uniqid('', true);

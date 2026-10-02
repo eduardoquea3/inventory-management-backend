@@ -10,5 +10,9 @@ class FrameworkStackVersionTest extends TestCase
     {
         $this->assertGreaterThanOrEqual(80200, PHP_VERSION_ID);
         $this->assertSame(12, (int) explode('.', app()->version())[0]);
+        $this->assertSame('testing', app()->environment());
+        $this->assertSame('sqlite', config('database.default'));
+        $this->assertSame(':memory:', config('database.connections.sqlite.database'));
+        $this->assertFalse((bool) config('telescope.enabled'));
     }
 }
