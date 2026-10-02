@@ -4,7 +4,7 @@ A Docker Compose–hosted inventory application running **Laravel 12.69.3** on *
 
 ## Quick start
 
-Requirements: Docker Engine and the Docker Compose plugin. Clone both independent repositories as siblings; Compose builds the frontend Dockerfile using `../frontend-legacy-vue2`.
+Requirements: Docker Engine with the Compose plugin, or Podman with `podman-compose`. Clone both independent repositories as siblings; Compose builds the frontend Dockerfile using `../frontend-legacy-vue2`.
 
 ```bash
 git clone <BACKEND_REPOSITORY_URL> backend-legacy-laravel8
