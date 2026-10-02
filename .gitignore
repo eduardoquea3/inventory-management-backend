@@ -4,6 +4,7 @@
 # Environment secrets
 .env
 .env.development
+temp_auto_push.bat
 .env.production
 
 # Composer dependencies and Laravel runtime artifacts
@@ -11,3 +12,5 @@
 /bootstrap/cache/
 /storage/framework/
 /storage/logs/
+.gitignore
+branch_structure.json
