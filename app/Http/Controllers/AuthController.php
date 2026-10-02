@@ -2,48 +2,30 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\LoginRequest;
+use App\Http\Resources\UserResource;
+use App\Services\AuthService;
+use App\Support\ApiResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    public function login(Request $request)
+    public function login(LoginRequest $request, AuthService $service)
     {
-        // Legacy: validation inside controller and inconsistent response format.
-        if (!$request->email || !$request->password) {
-            return response()->json(['error' => 'Email and password are required'], 400);
-        }
-
-        $user = DB::table('users')->where('email', $request->email)->first();
-
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json(['success' => false, 'message' => 'Invalid credentials'], 401);
-        }
-
-        $token = Str::random(60);
-        DB::table('users')->where('id', $user->id)->update(['api_token' => $token]);
-
-        return response()->json([
-            'token' => $token,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-            ],
-        ]);
+        $result = $service->login($request->validated('email'), $request->validated('password'));
+        return $result
+            ? ApiResponse::success($result)
+            : ApiResponse::error('INVALID_CREDENTIALS', 'Invalid credentials.', 401);
     }
 
-    public function me(Request $request)
+    public function me(Request $request, AuthService $service)
     {
-        $user = DB::table('users')->where('id', $request->auth_user_id)->first();
-        return response()->json($user);
+        return ApiResponse::success((new UserResource($service->user((int) $request->auth_user_id)))->resolve($request));
     }
 
-    public function logout(Request $request)
+    public function logout(Request $request, AuthService $service)
     {
-        DB::table('users')->where('id', $request->auth_user_id)->update(['api_token' => null]);
-        return response()->json(['ok' => true]);
+        $service->logout((int) $request->auth_user_id);
+        return ApiResponse::success(['logged_out' => true]);
     }
 }

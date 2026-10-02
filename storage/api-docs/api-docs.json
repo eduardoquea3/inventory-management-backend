@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Legacy API",
-        "description": "Laravel 8 legacy API. Request and response fields reflect observed controller behavior; optional or weakly validated legacy fields are not represented as guarantees.",
+        "description": "Inventory API. Success responses use {success: true, data: ...}; errors use {success: false, error: {code, message, details?}}. Paginated lists place pagination metadata in meta.pagination.",
         "version": "1.0.0"
     },
     "servers": [
@@ -31,27 +31,34 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Token and public user fields",
+                        "description": "Token and public user fields in data",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/LoginResponse"
+                                    "$ref": "#/components/schemas/ApiSuccess"
                                 }
                             }
                         }
                     },
-                    "400": {
-                        "description": "Missing email or password",
+                    "422": {
+                        "description": "Invalid request",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Error"
+                                    "$ref": "#/components/schemas/ApiError"
                                 }
                             }
                         }
                     },
                     "401": {
-                        "description": "Invalid credentials"
+                        "description": "Invalid credentials",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": []
@@ -172,6 +179,64 @@
                         }
                     },
                     {
+                        "name": "min_price",
+                        "in": "query",
+                        "schema": {
+                            "type": "number",
+                            "minimum": 0
+                        }
+                    },
+                    {
+                        "name": "max_price",
+                        "in": "query",
+                        "schema": {
+                            "type": "number",
+                            "minimum": 0
+                        }
+                    },
+                    {
+                        "name": "min_stock",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 0
+                        }
+                    },
+                    {
+                        "name": "max_stock",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 0
+                        }
+                    },
+                    {
+                        "name": "sort_by",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "default": "created_at",
+                            "enum": [
+                                "created_at",
+                                "name",
+                                "price",
+                                "stock"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_direction",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "default": "desc",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    },
+                    {
                         "name": "page",
                         "in": "query",
                         "description": "Page number; defaults to 1.",
@@ -193,13 +258,34 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Paginated product rows with category and total_movements"
+                        "description": "Success envelope; product array in data and page details in meta.pagination",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiSuccess"
+                                }
+                            }
+                        }
                     },
                     "401": {
-                        "description": "Missing or invalid token"
+                        "description": "Missing or invalid token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "Invalid pagination parameters"
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -332,6 +418,16 @@
                     },
                     "404": {
                         "description": "Product not found"
+                    },
+                    "409": {
+                        "description": "Product has stock movement history",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -360,7 +456,17 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Unpaginated movement rows; product existence is not checked"
+                        "description": "Success envelope containing the product movement history in data"
+                    },
+                    "404": {
+                        "description": "Product not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -397,10 +503,37 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Updated product and movement"
+                        "description": "Success envelope containing updated product and saved movement"
                     },
                     "404": {
-                        "description": "Product not found"
+                        "description": "Product not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Insufficient stock for outgoing movement",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -418,6 +551,45 @@
                 "summary": "List categories",
                 "operationId": "75de91f259fe671f8452ddf56f106d29",
                 "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Substring filter on name.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "sort_by",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "default": "created_at",
+                            "enum": [
+                                "created_at",
+                                "name"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_direction",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "default": "desc",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    },
                     {
                         "name": "page",
                         "in": "query",
@@ -440,13 +612,34 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Laravel paginator envelope with data, links, and meta"
+                        "description": "Success envelope; category array in data and page details in meta.pagination",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiSuccess"
+                                }
+                            }
+                        }
                     },
                     "401": {
-                        "description": "Missing or invalid token"
+                        "description": "Missing or invalid token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "Invalid pagination parameters"
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -588,6 +781,58 @@
     },
     "components": {
         "schemas": {
+            "ApiSuccess": {
+                "required": [
+                    "success",
+                    "data"
+                ],
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "data": {
+                        "type": "object"
+                    },
+                    "meta": {
+                        "type": "object",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "ApiError": {
+                "required": [
+                    "success",
+                    "error"
+                ],
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "error": {
+                        "required": [
+                            "code",
+                            "message"
+                        ],
+                        "properties": {
+                            "code": {
+                                "type": "string"
+                            },
+                            "message": {
+                                "type": "string"
+                            },
+                            "details": {
+                                "type": "object",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
             "LoginRequest": {
                 "required": [
                     "email",

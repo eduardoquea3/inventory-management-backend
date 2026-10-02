@@ -2,68 +2,64 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CategoryIndexRequest;
+use App\Http\Requests\StoreCategoryRequest;
+use App\Http\Requests\UpdateCategoryRequest;
+use App\Http\Resources\CategoryResource;
 use App\Models\Category;
+use App\Services\CategoryService;
+use App\Support\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class CategoryController extends Controller
 {
-    public function index(Request $request)
+    public function index(CategoryIndexRequest $request, CategoryService $service)
     {
-        $validated = $request->validate([
-            'page' => ['sometimes', 'integer', 'min:1'],
-            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+        $categories = $service->paginate($request->validated(), (int) $request->input('per_page', 15));
+        return ApiResponse::success(CategoryResource::collection($categories->getCollection())->resolve($request), 200, [
+            'pagination' => ['current_page' => $categories->currentPage(), 'per_page' => $categories->perPage(), 'total' => $categories->total(), 'last_page' => $categories->lastPage(), 'from' => $categories->firstItem(), 'to' => $categories->lastItem()],
         ]);
-
-        $categories = Category::orderByDesc('created_at')->orderByDesc('id')
-            ->paginate((int) ($validated['per_page'] ?? 15));
-
-        return \Illuminate\Http\Resources\Json\JsonResource::collection($categories);
     }
 
-    public function store(Request $request)
+    public function store(StoreCategoryRequest $request, CategoryService $service)
     {
-        if (!$request->name) {
-            return response()->json(['error' => 'name required'], 422);
-        }
-
-        $category = Category::create($request->all());
+        $category = $service->create($request->validated(), $request->auth_user_id);
         Log::info('Category created', ['category_id' => $category->id]);
-
-        return response()->json($category, 201);
+        return ApiResponse::success((new CategoryResource($category))->resolve($request), 201);
     }
 
-    public function show($id)
+    public function show($id, CategoryService $service)
     {
-        return response()->json(Category::find($id));
+        $category = $service->find((int) $id);
+        return $category
+            ? ApiResponse::success((new CategoryResource($category))->resolve(request()))
+            : ApiResponse::error('NOT_FOUND', 'Category not found.', 404);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateCategoryRequest $request, $id, CategoryService $service)
     {
         $category = Category::find($id);
 
         if (!$category) {
-            return response()->json(['message' => 'No category'], 404);
+            return ApiResponse::error('NOT_FOUND', 'Category not found.', 404);
         }
-
-        $category->fill($request->all());
-        $category->save();
+        $category = $service->update($category, $request->validated(), $request->auth_user_id);
 
         Log::info('Category updated', ['category_id' => $category->id]);
 
-        return response()->json(['updated' => true, 'category' => $category]);
+        return ApiResponse::success((new CategoryResource($category))->resolve($request));
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id, CategoryService $service)
     {
         $category = Category::find($id);
         if (!$category) {
-            return response()->json(['error' => 'not found'], 404);
+            return ApiResponse::error('NOT_FOUND', 'Category not found.', 404);
         }
-
-        $category->delete();
+        $service->delete($category, $request->auth_user_id);
         Log::info('Category deleted', ['category_id' => $id]);
 
-        return response()->json(['ok' => true]);
+        return ApiResponse::success(['deleted' => true]);
     }
 }

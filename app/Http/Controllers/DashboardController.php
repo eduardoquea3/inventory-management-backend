@@ -2,28 +2,30 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\ApiResponse;
+use App\Support\CatalogCache;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        // Legacy issue: multiple heavy queries without caching or optimized indexes.
-        return response()->json([
+        return ApiResponse::success(CatalogCache::remember('dashboard', [], static fn () => [
             'products' => DB::table('products')->count(),
             'categories' => DB::table('categories')->count(),
-            'low_stock' => DB::table('products')->where('stock', '<', 10)->get(),
-            'last_movements' => DB::table('stock_movements')->orderBy('created_at', 'desc')->limit(20)->get(),
-        ]);
+            'low_stock' => DB::table('products')->where('stock', '<', config('inventory.low_stock_threshold'))->get(),
+            'last_movements' => DB::table('stock_movements')->orderByDesc('created_at')->orderByDesc('id')->limit(20)->get(),
+        ]));
     }
 
     public function health()
     {
         try {
             DB::select('SELECT 1');
-            return response()->json(['status' => 'ok', 'database' => 'connected']);
+            return ApiResponse::success(['status' => 'ok', 'database' => 'connected']);
         } catch (\Throwable $e) {
-            return response()->json(['status' => 'fail', 'error' => $e->getMessage()], 500);
+            report($e);
+            return ApiResponse::error('SERVICE_UNAVAILABLE', 'Health check failed.', 500);
         }
     }
 }
